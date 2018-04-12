@@ -2,12 +2,15 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from PIL import Image
+import time
 import pymysql
 import urllib
 import os
 import re
 conn = pymysql.connect(host='127.0.0.1', port=3307, user='root', passwd='a1234', db='bucketlist', charset='utf8')
 cur = conn.cursor()
+
+time_ = time.time()
 
 
 def endpage():
@@ -92,39 +95,43 @@ def cklicense(license):
 
 
 def information(url, name, path, id_):
-    html = urlopen(url)
-    source = html.read()                            # 소스를 읽는다
-    html.close()                                    # 모두 진행한 후 close 해준다
+    try:
+        html = urlopen(url)
+        source = html.read()                            # 소스를 읽는다
+        html.close()                                    # 모두 진행한 후 close 해준다
 
-    name = name.replace("'", "\\'")                 #' 이 SQL 문자구분에 문제가 생길수도 있으니 \ 삽입
-    soup = BeautifulSoup(source, "html5lib")
-    selecttable = soup.find(class_='tb_bbs tbType')
-    selectlins = soup.find(class_='copyD')
-    selectimg = soup.find(class_='imgD')
-    table = selecttable.find_all('tr')
-    lins = selectlins.find('img').get('src')
-    lins = "https://gongu.copyright.or.kr" + lins
-    lins = cklicense(lins)                                        # 라이센스 이미지 중복체크 및 저장 경로설정
-    image = selectimg.find('img').get('src')
-    image = "https://gongu.copyright.or.kr" + image
+        name = name.replace("'", "\\'")                 #' 이 SQL 문자구분에 문제가 생길수도 있으니 \ 삽입
+        soup = BeautifulSoup(source, "html5lib")
+        selecttable = soup.find(class_='tb_bbs tbType')
+        selectlins = soup.find(class_='copyD')
+        selectimg = soup.find(class_='imgD')
+        table = selecttable.find_all('tr')
+        lins = selectlins.find('img').get('src')
+        lins_name = selectlins.get_text().strip()
+        lins = "https://gongu.copyright.or.kr" + lins
+        lins = cklicense(lins)                                        # 라이센스 이미지 중복체크 및 저장 경로설정
+        image = selectimg.find('img').get('src')
+        image = "https://gongu.copyright.or.kr" + image
 
-    into_ = "(_id,filename,path,license,"                        # DB에 저장할 컬럼
-    value = "('" + id_ + "','" + name + "','" + path + "','" + lins + "',"      # DB에 저장할 값
-    count = 4                               # 값들의 갯수 체크 (_id , filename , path , license는 이미 있으므로 4부터 시작)
-    for tab in table:
-        th = tab.find('th')             # 테이블 중에서 th만 추출
-        td = tab.find('td')             # 테이블 중에서 td만 추출
-        [s.extract() for s in td('script')]         # script 태그는 제외
-        thtext = th.get_text().strip()                  # th내에 text는 추출하고 공백 제거
-        into_ += cktitle(thtext) + ","                  # 값을 넣을 컬럼위치 체크
-        tdtext = td.get_text(" ", strip='True')         # td안에서 텍스트 추출 공백이 있을시 띄어쓰기 하나로 변환
-        tdtext = tdtext.replace("'", "\\'")             # ' 이 SQL 문자구분에 문제가 생길수도 있으니 \ 삽입
-        value += "'"+tdtext+"',"                        # DB 인서트를 위해 value값 저장
-        count += 1                                       # 컬럼갯수 확인
-    into_ += "col_size)"                                # 컬럼갯수를 넣을 컬럼 확보 후 괄호 닫기
-    value += str(count) + ")"                       # 마지막으로 갯수삽입 후 괄호 닫기
-    query = "INSERT INTO crawler"+into_+" values"+value+""      # 쿼리문 작성
-    return {'query': query, 'image': image}                                     # 쿼리 전송
+        into_ = "(_id,filename,path,license,license_name,"                        # DB에 저장할 컬럼
+        value = "('" + id_ + "','" + name + "','" + path + "','" + lins + "','" + lins_name + "',"      # DB에 저장할 값
+        count = 0                               # 값들의 갯수 체크 (_id , filename , path , license는 이미 있으므로 4부터 시작)
+        for tab in table:
+            th = tab.find('th')             # 테이블 중에서 th만 추출
+            td = tab.find('td')             # 테이블 중에서 td만 추출
+            [s.extract() for s in td('script')]         # script 태그는 제외
+            thtext = th.get_text().strip()                  # th내에 text는 추출하고 공백 제거
+            into_ += cktitle(thtext) + ","                  # 값을 넣을 컬럼위치 체크
+            tdtext = td.get_text(" ", strip='True')         # td안에서 텍스트 추출 공백이 있을시 띄어쓰기 하나로 변환
+            tdtext = tdtext.replace("'", "\\'")             # ' 이 SQL 문자구분에 문제가 생길수도 있으니 \ 삽입
+            value += "'"+tdtext+"',"                        # DB 인서트를 위해 value값 저장
+            count += 1                                       # 컬럼갯수 확인
+        into_ += "col_size)"                                # 컬럼갯수를 넣을 컬럼 확보 후 괄호 닫기
+        value += str(count) + ")"                       # 마지막으로 갯수삽입 후 괄호 닫기
+        query = "INSERT INTO crawler"+into_+" values"+value+""      # 쿼리문 작성
+        return {'query': query, 'image': image}                                     # 쿼리 전송
+    except AttributeError:
+        return {'query': "error", 'image': "error"}
 
 
 def thumbnail(path):
@@ -156,13 +163,20 @@ def ckimg(imgpath, filename, query):
             print("이미지 저장 완료 filename : %s" % filename)
         except pymysql.err.InternalError:
             print('error : 새로운 컬럼 필요! 예외 처리했습니다.')
+            print(query)
             result = True
         except pymysql.err.IntegrityError:
             print('error : 이미지가 이미 DB에 저장되어있습니다 ')
             urllib.request.urlretrieve(imgpath, filename)
             thumbnail(filename)
             print("이미지 저장 완료 filename : %s" % filename)
-
+        except pymysql.err.DataError:
+            print("error : 데이터 길이가 맞지 않습니다..")
+            print(query)
+            result = True
+        except pymysql.err.ProgrammingError:
+            print("error : 이미지 정보가 부족합니다 예외처리하겠습니다.")
+            result = True
     else:
         print("이미 저장된 이미지 입니다.")
     return result
@@ -172,7 +186,8 @@ def Crawling(i, index):
     count = 0
     realcount = 0
     while i <= index:
-        url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?menuNo=200023&viewType=&wrtTy=4&sortSe=&usePurps=&usageRange=&depth2At=Y&copyType_2d=&searchWrd=&pageIndex=%d" % i
+       # url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?menuNo=200023&viewType=&wrtTy=4&sortSe=&usePurps=&usageRange=&depth2At=Y&copyType_2d=&searchWrd=&pageIndex=%d" % i
+        url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?menuNo=200023&wrtTy=4&pageIndex=1&sortSe=&usePurps=&usageRange=&copyType=&copyType_1d=&copyType_2d=&depth2At=Y&searchWrd=see"
         html = urlopen(url)
         source = html.read()
         html.close()
@@ -203,6 +218,7 @@ def Crawling(i, index):
 
     print("크롤링완료 새로운 이미지 : (%d/%d)" % (count, realcount))
     print("크롤링한 페이지 %d page" % (i-1))
+    print("%d 초" % (time.time() - time_))
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------
 
