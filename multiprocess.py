@@ -9,6 +9,7 @@ import urllib
 import os
 import re
 import zipfile
+import shutil
 import sys
 import tqdm
 
@@ -51,6 +52,23 @@ def zipfile_(result, file_path):
                         compress_type=zipfile.ZIP_DEFLATED)  # 압축 타입
         for file_s in file_path:
             os.remove('./img/' + file_s)
+
+
+def file_search(dirname):
+    filenames = os.listdir(dirname)
+    for filename in filenames:
+        full_filename = os.path.join(dirname, filename)
+        os.remove(full_filename)
+
+
+def alldelete():
+    file_search('./img')
+    file_search('./ccl')
+    file_search('./thumbnail')
+    cur.execute('DELETE FROM crawler;')
+    conn.commit()
+    deleteerror_log()
+    print('완료')
 
 
 def cktitle(title):
@@ -122,17 +140,19 @@ def cklicense(license):
     return filepath
 
 
-def information(url, name, path, id_):
+def information(url, path, id_):
     try:
         html = urlopen(url, timeout=5)
         source = html.read()                            # 소스를 읽는다
         html.close()                                    # 모두 진행한 후 close 해준다
 
-        name = name.replace("'", "\\'")                 #' 이 SQL 문자구분에 문제가 생길수도 있으니 \ 삽입
         soup = BeautifulSoup(source, "html5lib")
+        selecttitles = soup.find(class_='tit_txt3 mt0')
         selecttable = soup.find(class_='tb_bbs tbType')
         selectlins = soup.find(class_='copyD')
         selectimg = soup.find(class_='imgD')
+        name = selecttitles.get_text().strip()
+        name = name.replace("'", "\\'")  # ' 이 SQL 문자구분에 문제가 생길수도 있으니 \ 삽입
         table = selecttable.find_all('tr')
         lins = selectlins.find('img').get('src')
         lins_name = selectlins.get_text().strip()
@@ -180,6 +200,33 @@ def selectid(url):
     title = re.sub("[^0-9]", "", Search)                                        # 번호만 추출
     filename = "./img/" + str(title) + ".PNG"                                   # img저장 경로 설정
     return {'path': filename, 'id_': title}
+
+
+def errorurl(url_):
+    with open('./error_log.txt', 'a') as file:
+        file.write(url_+'\n')
+    print('error_log write : ', url_)
+
+
+def readerror():
+    index = 0
+    with open('./error_log.txt', 'r') as file:
+        for i in file:
+            filename = selectid(i)  # selectid 함수로 가서 고유id 추출
+            info_ = information(i, filename['path'], filename['id_'])  # 상세정보 추출
+            createimg = ckimg(info_['image'], filename['path'], info_['query'], i)  # 폴더 내 중복 이미지 체크 후 DB insert
+            if createimg:
+                print('오류 재발생 확인 바랍니다. href :', i)
+            else:
+                index += 1
+    print('새로받은 이미지 : %d 개' % index)
+    deleteerror_log()
+
+
+def deleteerror_log():
+    with open('./error_log.txt', 'w+t') as file:
+        for i in file:
+            print('delete log', i)
 
 
 def ckimg(imgpath, filename, query, url):
@@ -238,15 +285,14 @@ def Crawling(i):
             realcount += 1                          # 전체 카운트 인덱싱
             href = val.a.get('href')                # li 태그의 href 추출
             realhref = "https://gongu.copyright.or.kr" + href
-            imgtitle = val.get_text().strip()       # li태그의 텍스트 모두 추출후 공백 지우기
             filename = selectid(realhref)           # selectid 함수로 가서 고유id 추출
-            info_ = information(realhref, imgtitle, filename['path'], filename['id_'])  # 상세정보 추출
+            info_ = information(realhref, filename['path'], filename['id_'])  # 상세정보 추출
             createimg = ckimg(info_['image'], filename['path'], info_['query'], realhref)      # 폴더 내 중복 이미지 체크 후 DB insert
             if not createimg:                                                             # DB삽입 성공시 성공한 갯수 count
                 count += 1                                                 # 완료 갯수 ++
-                print("완료 href : %s" % realhref)
             else:
                 error_ += 1                                                # error 발생
+                errorurl(realhref)
         print("----------------------------------------------------")
         print("           %d 페이지 완료                          " % i)
         print("          process : {0}                           ".format(current_process().name))
@@ -255,6 +301,7 @@ def Crawling(i):
     except Exception as ex:
         print('error : ', ex)
         error_ += 9                                 # 페이지 에러발생
+    time.sleep(0.5)
     return [int(error_), int(count)]            # 에러갯수 및 완료한 갯수 return
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------
@@ -266,10 +313,10 @@ def main(url_):
     p = Pool(6)
     # end = int(endpage(url_)) + 1
     start = 1
-    end = 5
+    end = 11
     p.daemon = True
     try:
-        val_ = p.map(Crawling, range(start, end))
+        val_ = p.imap(Crawling, range(start, end))
     except Exception as ex:
         print('error : ', ex)
     for er, co in val_:
@@ -279,15 +326,25 @@ def main(url_):
     p.join()
     print("================================ end ==================================")
     print("(%s ~ %s) 페이지 크롤링 완료" % (str(start), str(end - 1)))
-    print("다운받은 이미지 : %d" % int(values_))
+    print("다운받은 이미지 : %d" % (int(values_)))
     print("오류로 인해 받지 못한 이미지 : %d" % int(values))
-    print('전체 파일갯수 : %d' % file_len())
+    print('폴더 내에 있는 파일 갯수 : %d' % file_len())
 
 if __name__ == '__main__':
-    end = 10
-    url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
-    main(url)
-    print("%0.2f 초" % (time.time() - time_))
+    indexing = int(input('1: 시작  2:  모두지우기 >>>> '))
+    if indexing == 1:
+        url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
+        main(url)
+        print("%0.2f 초" % (time.time() - time_))
+        print("5초 쉬었다 오류가 발생한 파일 다시 크롤링. . . ")
+        time.sleep(5)
+        readerror()
+
+    elif indexing == 2:
+        alldelete()
+
+    else:
+        print('1과 2만 골라주세요')
 
     # --------------------------------------------------------------------------------------------------Process
     # START, END = 1, endpage(url)
