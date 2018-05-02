@@ -180,6 +180,9 @@ def information(url, path, id_):
         return {'query': query, 'image': image}                                     # 쿼리 전송
     except AttributeError:                                                      #에러일시 에러전송
         return {'query': "error", 'image': "error"}
+    except Exception as ex:
+        print('세부정보 에러 : ', ex)
+        return {'query': "error", 'image': "error"}
 
 
 def thumbnail(path):
@@ -208,17 +211,33 @@ def errorurl(url_):
     print('error_log write : ', url_)
 
 
+def ck_Number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
 def readerror():
     index = 0
     with open('./error_log.txt', 'r') as file:
         for i in file:
-            filename = selectid(i)  # selectid 함수로 가서 고유id 추출
-            info_ = information(i, filename['path'], filename['id_'])  # 상세정보 추출
-            createimg = ckimg(info_['image'], filename['path'], info_['query'], i)  # 폴더 내 중복 이미지 체크 후 DB insert
-            if createimg:
-                print('오류 재발생 확인 바랍니다. href :', i)
+            if ck_Number(i):
+                print('전체 페이지 크롤링은 5초정도 쉽니다..(url.timeout 에러 방지) page : ', i)
+                time.sleep(5)
+                in_ = Crawling(int(i))
+                index += in_[1]             # return 받은 크롤링 완료한 이미지 갯수 0 : 에러로인해 못받은 이미지 갯수
             else:
-                index += 1
+                filename = selectid(i)  # selectid 함수로 가서 고유id 추출
+                info_ = information(i, filename['path'], filename['id_'])  # 상세정보 추출
+                createimg = ckimg(info_['image'], filename['path'], info_['query'], i)  # 폴더 내 중복 이미지 체크 후 DB insert
+                if createimg:
+                    print('오류 재발생 확인 바랍니다. href :', i)
+                else:
+                    index += 1
+                print('href 확인', i)
+
     print('새로받은 이미지 : %d 개' % index)
     deleteerror_log()
 
@@ -300,6 +319,7 @@ def Crawling(i):
         print("----------------------------------------------------")
     except Exception as ex:
         print('error : ', ex)
+        errorurl(i)
         error_ += 9                                 # 페이지 에러발생
     time.sleep(0.5)
     return [int(error_), int(count)]            # 에러갯수 및 완료한 갯수 return
@@ -313,7 +333,7 @@ def main(url_):
     p = Pool(6)
     # end = int(endpage(url_)) + 1
     start = 1
-    end = 11
+    end = 5
     p.daemon = True
     try:
         val_ = p.imap(Crawling, range(start, end))
@@ -331,7 +351,7 @@ def main(url_):
     print('폴더 내에 있는 파일 갯수 : %d' % file_len())
 
 if __name__ == '__main__':
-    indexing = int(input('1: 시작  2:  모두지우기 >>>> '))
+    indexing = int(input('1: 시작  2: 모두지우기 >>>> '))
     if indexing == 1:
         url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
         main(url)
