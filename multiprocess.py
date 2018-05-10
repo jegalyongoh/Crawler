@@ -2,7 +2,7 @@
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 from PIL import Image
-from multiprocessing import Pool,current_process
+from multiprocessing import Pool, current_process
 import time
 import pymysql
 import urllib
@@ -15,7 +15,6 @@ import tqdm
 
 conn = pymysql.connect(host='127.0.0.1', port=3307, user='root', passwd='a1234', db='bucketlist', charset='utf8')
 cur = conn.cursor()
-
 time_ = time.time()
 
 
@@ -207,8 +206,7 @@ def selectid(url):
 
 def errorurl(url_):
     with open('./error_log.txt', 'a') as file:
-        file.write(url_+'\n')
-    print('error_log write : ', url_)
+        file.write(str(url_) + '\n')
 
 
 def ck_Number(s):
@@ -235,8 +233,8 @@ def readerror():
                 if createimg:
                     print('오류 재발생 확인 바랍니다. href :', i)
                 else:
+                    print('이미지 다운로드 완료')
                     index += 1
-                print('href 확인', i)
 
     print('새로받은 이미지 : %d 개' % index)
     deleteerror_log()
@@ -276,15 +274,14 @@ def ckimg(imgpath, filename, query, url):
             print(url)
             result = True
         except Exception as ex:
-            print("error : ", ex)
+            print("ckimg error : ", ex)
             result = True
-    # else:
-    #     print("이미 저장된 이미지 입니다." + url)
+    else:
+        print("이미 저장된 이미지 입니다." + url)
     return result
 
 
 def Crawling(i):
-
     error_ = 0
     count = 0
     realcount = 0
@@ -318,7 +315,7 @@ def Crawling(i):
         print("        새로운 이미지 : (%d/%d)             " % (count, realcount))
         print("----------------------------------------------------")
     except Exception as ex:
-        print('error : ', ex)
+        print('page error : ', ex)
         errorurl(i)
         error_ += 9                                 # 페이지 에러발생
     time.sleep(0.5)
@@ -332,39 +329,43 @@ def main(url_):
     values_ = 0
     p = Pool(6)
     # end = int(endpage(url_)) + 1
-    start = 1
-    end = 5
     p.daemon = True
+    start = 1
+    end = 2001
     try:
-        val_ = p.imap(Crawling, range(start, end))
+       val_ = p.imap(Crawling, range(start, end))
     except Exception as ex:
-        print('error : ', ex)
+        print('pool error : ', ex)
     for er, co in val_:
         values += int(er)
         values_ += int(co)
     p.terminate()
-    p.join()
-    print("================================ end ==================================")
-    print("(%s ~ %s) 페이지 크롤링 완료" % (str(start), str(end - 1)))
-    print("다운받은 이미지 : %d" % (int(values_)))
-    print("오류로 인해 받지 못한 이미지 : %d" % int(values))
-    print('폴더 내에 있는 파일 갯수 : %d' % file_len())
+    try:
+        p.join()
+    except KeyboardInterrupt:
+        print('end')
+    finally:
+        print("================================ end ==================================")
+        print("(%s ~ %s) 페이지 크롤링 완료" % (str(start), str(end - 1)))
+        print("다운받은 이미지 : %d" % (int(values_)))
+        print("오류로 인해 받지 못한 이미지 : %d" % int(values))
+        print('폴더 내에 있는 파일 갯수 : %d' % file_len())
 
 if __name__ == '__main__':
-    indexing = int(input('1: 시작  2: 모두지우기 >>>> '))
-    if indexing == 1:
-        url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
-        main(url)
-        print("%0.2f 초" % (time.time() - time_))
-        print("5초 쉬었다 오류가 발생한 파일 다시 크롤링. . . ")
-        time.sleep(5)
-        readerror()
+        indexing = int(input('1: 시작  2: 모두지우기 >>>> '))
+        if indexing == 1:
+            url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
+            main(url)
+            print("%0.2f 초" % (time.time() - time_))
+            print("5초 쉬었다 오류가 발생한 파일 다시 크롤링. . . ")
+            time.sleep(5)
+            readerror()
 
-    elif indexing == 2:
-        alldelete()
+        elif indexing == 2:
+            alldelete()
 
-    else:
-        print('1과 2만 골라주세요')
+        else:
+            print('1과 2만 골라주세요')
 
     # --------------------------------------------------------------------------------------------------Process
     # START, END = 1, endpage(url)
