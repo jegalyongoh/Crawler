@@ -9,9 +9,6 @@ import urllib
 import os
 import re
 import zipfile
-import shutil
-import sys
-import tqdm
 
 conn = pymysql.connect(host='127.0.0.1', port=3307, user='root', passwd='a1234', db='bucketlist', charset='utf8')
 cur = conn.cursor()
@@ -30,16 +27,11 @@ def endpage(url):
 
 
 def file_len():
-    for root, dirs, files in os.walk('D:\PyCharm Community Edition 2017.2\html\example\img'):
-        return int(len(files))
-        # if len(files) >= 1000:
-        #     zipfile_(True, files)
-        #     return True
-        # else:
-        #     return False
+    for root, dirs, files in os.walk('./img'):
+        return int(len(files))              # 파일안 갯수 확인
 
 
-def zipfile_(result, file_path):
+def zipfile_(result, file_path):                # 현재 사용하지 않음
     if result:
         zip = zipfile.ZipFile('D:\PyCharm Community Edition 2017.2\html\example/image_file.zip', 'a')
 
@@ -89,6 +81,8 @@ def cktitle(title):
         return "original_text"
     elif title == "요약정보":
         return "summary_info"
+    elif title == "추가사항":
+        return "details"
     elif title == "관련태그":
         return "relation_tag"
     elif title == "발행자":
@@ -325,61 +319,59 @@ def Crawling(i):
 
 
 def main(url_):
-    values = 0
-    values_ = 0
-    p = Pool(6)
-    # end = int(endpage(url_)) + 1
-    p.daemon = True
+    pro = True
     start = 1
-    end = 2001
-    try:
-       val_ = p.imap(Crawling, range(start, end))
-    except Exception as ex:
-        print('pool error : ', ex)
-    for er, co in val_:
-        values += int(er)
-        values_ += int(co)
-    p.terminate()
-    try:
-        p.join()
-    except KeyboardInterrupt:
-        print('end')
-    finally:
-        print("================================ end ==================================")
-        print("(%s ~ %s) 페이지 크롤링 완료" % (str(start), str(end - 1)))
-        print("다운받은 이미지 : %d" % (int(values_)))
-        print("오류로 인해 받지 못한 이미지 : %d" % int(values))
-        print('폴더 내에 있는 파일 갯수 : %d' % file_len())
+    end = 2000
+    plus = 2000
+    real_end = int(endpage(url_)) + 1
+    while pro:
+        values_ = 0
+        error_value = 0
+        process_time = time.time()
+        p = Pool(6)
+        p.daemon = True
+        try:
+           process = p.imap(Crawling, range(start, end))
+        except Exception as ex:
+            print('pool error : ', ex)
 
-if __name__ == '__main__':
-        indexing = int(input('1: 시작  2: 모두지우기 >>>> '))
-        if indexing == 1:
-            url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
-            main(url)
-            print("%0.2f 초" % (time.time() - time_))
+        for er, co in process:
+            error_value += int(er)
+            values_ += int(co)
+        p.terminate()
+        try:
+            p.join()
+        except KeyboardInterrupt:
+            print('end')
+        finally:
+            print("================================ end ==================================")
+            print("(%s ~ %s) 페이지 크롤링 완료" % (str(start), str(end - 1)))
+            print("걸린 시간 : %0.2f 초" % (time.time() - process_time))
+            print("다운받은 이미지 : %d" % (int(values_)))
+            print("오류로 인해 받지 못한 이미지 : %d" % int(error_value))
+            print('폴더 내에 있는 파일 갯수 : %d' % file_len())
             print("5초 쉬었다 오류가 발생한 파일 다시 크롤링. . . ")
             time.sleep(5)
             readerror()
-
-        elif indexing == 2:
-            alldelete()
-
+        if end == real_end+1:
+            pro = False
         else:
-            print('1과 2만 골라주세요')
+            print("---------------30초 쉬었다 다시 시작--------------- ")
+            time.sleep(30)
+            start += plus
+            end += plus
+            if end > real_end:
+                end = real_end+1
 
-    # --------------------------------------------------------------------------------------------------Process
-    # START, END = 1, endpage(url)
-    # START, END = 1, 100
-    # proc = []
-    # th1 = Process(target=Crawling, args=(START, END // 4))
-    # th2 = Process(target=Crawling, args=(END // 4, END // 2))
-    # th3 = Process(target=Crawling, args=(END // 2, 3 * END // 4))
-    # th4 = Process(target=Crawling, args=(3 * END // 4, END))
-    # proc.append(th1)
-    # proc.append(th2)
-    # proc.append(th3)
-    # proc.append(th4)
-    # for i in proc:
-    #     i.start()
-    # for i in proc:
-    #     i.join()
+
+if __name__ == '__main__':
+    indexing = int(input('1: 시작  2: 모두지우기 >>>> '))
+    if indexing == 1:
+        url = "https://gongu.copyright.or.kr/gongu/wrt/wrtCl/listWrt.do?wrtTy=4&menuNo=200023&depth2At=Y"
+        main(url)
+        print("==============================모든 페이지 크롤링 완료=================================  ")
+        print("%0.2f 초" % (time.time() - time_))
+        print('폴더 내에 있는 파일 갯수 : %d' % file_len())
+
+    elif indexing == 2:
+        alldelete()
