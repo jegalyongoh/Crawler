@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>info</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+    
+    <!-- <script src="{{ url_for('static',filename='js/index.js') }}"></script>
+    <script src="{{ url_for('static',filename='css/index.css') }}"></script> -->
+    <script>
+            var _id ="{{ id_ }}";
+            $.ajax({
+                url:'/info/original',
+                type : "GET",
+                data : {"_id" : _id},
+                success:function(data){
+                    var data = JSON.parse(data);
+                    var apidata= new Array;
+                    var count=0;
+                    for (var a in data[0]){
+                        if (data[0].hasOwnProperty(a)){
+                            if (data[0][a] == null){
+                                 delete data[0][a];
+                            }
+                            else{
+                                apidata.push([a,data[0][a]]);
+                            }
+                        }
+                    }
+                    var colspan = apidata.pop();
+                    var id_ = apidata.shift();
+                    var filename = apidata.shift();
+                    var path = apidata.shift();
+                    var license_path = apidata.shift();
+                    var license = apidata.shift();
+                    $('#image_name').text(filename[1]);
+                    $('#license_name').text(license[1]);
+                    var tabledata = $('#infodata').DataTable( {
+                        "searching" : false,
+                        "scrollY": "700px",
+                        "scrollCollapse": true,
+                        "paging": false,
+                        "info": false,
+                        "ordering": false,
+                        data : apidata,
+                        columns : [
+                            {title : 'Name'},
+                            {title : 'infomation'}
+                        ]
+                    });
+                    $('#infodata tbody').on('click', 'tr', function () {
+                        var data = tabledata.row( this ).data();
+                        console.log(data)
+                        $('#id_').val(id_);
+                        $('#dataname').text(data[0]);
+                        $('#datavalue').val(data[1]);
+                        $('#myModal').modal();
+                    });
+                },
+                error:function(request,status,error){
+                    alert('해당 ID에 일치하는 정보가 없습니다. 다시 확인헤주세요')
+                    location.href='/'
+                }
+            });
+            $.ajax({
+                url:'/info/hash/original',
+                data :{"_id":_id},
+                success : function(data){
+                    data = JSON.parse(data)
+                    var hash_ = data['hash'] 
+                    var imagesrc = "data:image/png;base64," + hash_;
+                    $("#image").attr("src", imagesrc)
+                },
+                error:function(request,status,error){
+                    alert('해당 ID에 일치하는 정보가 없습니다. 다시 확인헤주세요')
+                    location.href='/'
+                }
+            });
+            $.ajax({
+                url:'/info/hash/license',
+                data :{"_id":_id},
+                success : function(data){
+                    data = JSON.parse(data)
+                    var hash_ = data['hash'] 
+                    var imagesrc = "data:image/png;base64," + hash_;
+                    $("#license").attr("src", imagesrc)
+                },
+                error:function(request,status,error){
+                    alert('해당 ID에 일치하는 정보가 없습니다. 다시 확인헤주세요')
+                    location.href='/'
+                }
+            });
+            function updatedata(){
+                var checkupdate = confirm('수정 하시겠습니까?')
+                var named = $("#dataname").text();
+                var values = $("#datavalue").val();
+                if (checkupdate){
+                    $.ajax({
+                        type : "PUT",
+                        url : '/update/imageinfo',
+                        data : {'_id' : _id, 'col' : named , 'value' : values},
+                        success : function(data){
+                            var data = JSON.parse(data)
+                            if(data['result']){
+                                alert('성공\nImage ID : ' + data['_id']);
+                                $('#myModal').modal('toggle');
+                                window.location.reload()
+                            }
+                            else{
+                                alert('실패');
+                            }
+                        },
+                        error:function(request,status,error){
+                            alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                        }
+                    })
+                }
+            }
+            
+            
+    </script>
+    <style>
+        .display{
+            text-align: "center"
+        }
+        #images{
+            width: 70%;
+            background-color: #EAEAEA;
+            text-align: center;
+        }
+        #image{
+            width: 90%;
+            height: 90%;
+        }
+        #right_main{
+            width: 29%;
+            margin-left: 1%;
+            
+        }
+        .jumbotron{
+            text-align: center
+        }
+        .navber{
+            margin: 0; padding: 0;
+            list-style: none;
+            position: fixed;
+            width: 100%;
+            background-color: #008299;  
+        }
+        #navhref{
+            text-decoration: none;
+            color: white
+        }
+    </style>
+</head>
+<body>
+        <ul class="navber">
+            <p><a href="/" id="navhref"><h3>&emsp;API Test Page</h3></a></p>
+        </ul>
+        <br><br>
+        <div class="container">
+            <div class="panel panel-default">
+                <div class="panel panel-header">
+                    <div class="jumbotron">
+                            <p id="image_name"></p>
+                    </div>
+                    <div class="divider" style="float : right" id="right_main">
+                        <br>
+                        <p><img id="license" src="#"></p>
+                        <p id="license_name"></p>
+                    </div>
+                    <div class="divider" style="float: left;" id="images">
+                        <p><img id="image" src="#"></p>
+                    </div>
+                </div>
+                <div class="panel panel-main">
+                    <table id="infodata" class="display"></table>
+                </div>
+                <div class="panel panel-footer" style="float : center">
+                    <button class="btn btn-danger" onclick="location.href='/'">Main</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal fade" id="myModal" role="dialog">
+                <div class="modal-dialog">
+                  <!-- Modal content-->
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <button type="button" class="close" data-dismiss="modal">&times;</button>
+                      <h4 class="modal-title">삭제 / 수정</h4>
+                    </div>
+                        <div class="modal-body">
+                            <input id="id_"type="hidden"><br>
+                            <p><h5 id="dataname"></h5> : <input id="datavalue"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-default" onclick="updatedata()" type="button">수정하기</button>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                  </div>
+                </div>
+        </div>
+</body>
+</html>

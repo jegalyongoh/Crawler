@@ -1,0 +1,29 @@
+﻿├──.vscode
+├──app
+    ├──__pycache__
+    ├──common
+        ├──confparser.py
+    ├──module
+        ├──__pycache__
+        ├──__init__.py
+        ├──conf.py
+        ├──Errorlog.py
+        ├──multiprocess.py
+        ├──outputfile.py
+        ├──imagehash.py
+├──conf
+    ├──com.conf
+├──log
+    ├──error_log.txt
+    ├──hashimage.txt
+    ├──hashlicense.txt
+    ├──hashthumbnail.txt
+├──Output
+    ├──ccl
+    ├──img
+    ├──thumbnail
+    ├──hash
+	├──image
+	├──license
+	├──thumbnail
+├──Tree

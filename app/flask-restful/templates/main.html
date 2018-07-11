@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Main page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
+    
+    <!-- <script src="{{ url_for('static',filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static',filename='css/main.css') }}"></script> -->
+    <script>
+        $('#close').hide()
+        function filecount(){
+            $.ajax({
+                url : '/info/datacount',
+                success : function(data){
+                    $('.container').text(data)
+                    console.log(data)
+                },
+                error:function(request,status,error){
+                    alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                }
+            })
+        }
+        function setting(){
+            $.ajax({
+                url : '/info/setting',
+                success : function(data){
+                    $('.container').text(data)
+                    console.log(data)
+                },
+                error:function(request,status,error){
+                    alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                }
+            })
+        }
+        function licensehash(){
+            var id_ = $('#inputid').val();
+            $.ajax({
+                url:'/info/hash/license',
+                data :{"_id":id_},
+                success : function(data){
+                    data = JSON.parse(data)
+                    $('.container').text('console Write')
+                    console.log(data);
+                },
+                error:function(request,status,error){
+                    alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                }
+            })
+        }
+        function imageinfo(){
+            var id_ = $('#inputid').val();
+            $.ajax({
+                url:'/info/original',
+                data :{"_id":id_},
+                success : function(data){
+                    var info = JSON.stringify(data)
+                    $('.container').text(info)
+                    console.log(data);
+                },
+                error:function(request,status,error){
+                    alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                }
+            })
+        }
+        function ui(){
+            var id_ = $('#inputid').val();
+            var form= document.forms['Search'];
+            form.action='/index';
+            form.submit();
+        }
+
+        function license(){
+                var id_ = $('#inputid').val();
+                $.ajax({
+                    url:'/info/license',
+                    data :{"_id":id_},
+                    success : function(data){
+                        $('.container').text(data);
+                        console.log(data);
+                    },
+                    error:function(request,status,error){
+                        alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                    }
+                })
+        }
+        function imagehash(){
+                var id_ = $('#inputid').val();
+                $.ajax({
+                    url:'/info/hash/original',
+                    data :{"_id":id_},
+                    success : function(data){
+                        data = JSON.parse(data)
+                        $('.container').text('console write');
+                        console.log(data);
+                    },
+                    error:function(request,status,error){
+                        alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                    }
+                })
+        }
+        function thumbnailhash(){
+                var id_ = $('#inputid').val();
+                $.ajax({
+                    url:'/info/hash/thumbnail',
+                    data :{"_id":id_},
+                    success : function(data){
+                        data = JSON.parse(data)
+                        $('.container').text('console write');
+                        console.log(data);
+                    },
+                    error:function(request,status,error){
+                        alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                    }
+                })
+        }
+        function allimg(){
+            $.ajax({
+                    url:'/api/images',
+                    success : function(data){
+                        data = JSON.parse(data)
+                        $('.container').text('console write');
+                        console.log(data)
+                    },
+                    error:function(request,status,error){
+                        alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                    }
+                })
+        }
+        function deleteid(){
+            var id = $('#deleteid').val()
+            var CheckDelete = confirm('정말 삭제 하시겠습니까? id : ' + id)
+            if (CheckDelete){
+                $.ajax({
+                    url: '/delete/image',
+                    type : "DELETE",
+                    data : {"_id" : id },
+                    success :  function(data){
+                        data = JSON.parse(data)
+                        if (data['result']){
+                            alert('DELETE code :  '+data['id'])
+                        }
+                        else{
+                            alert('데이터 삭제 실패 code :  '+data['id'])
+                        }
+                    },
+                    error:function(request,status,error){
+                        alert("에러 발생. 이미지 id를 확인해 주세요 \nerror:"+error);
+                    }
+                })
+            }
+        }
+        function rangedata(){
+            $('#datas').remove();
+            $('#close').show();
+            var start = $('#startdata').val()
+            var end = $('#enddata').val()
+            $('#rangepage').append('<div class="loader"></div>')
+            $.ajax({
+                url : '/info/datarange',
+                type : "GET",
+                data : {"start" : start , "end" : end},
+                dataType : "JSON",
+                success : function(data){
+                    var data = JSON.parse(data);
+                    $(".loader").remove()
+                    $("#datas").empty()
+                    $('#rangepage').append('<div id="datas"></div>')
+                    for(var i=0; i<=end-1; i++){
+                        for (var a in data[i]['info']){
+                            if (data[i]['info'].hasOwnProperty(a)){
+                                if (data[i]['info'][a] == null){
+                                    delete data[i]['info'][a]
+                                }
+                            }
+                        }
+                        var info = JSON.stringify(data[i]['info'])         
+                        var imagesrc= "data:image/png;base64,"+data[i].hashs
+                        var adddata = "<p id=dataps><img src="+imagesrc+" id='dataimages'><br>"+info+"</p><br>"
+                        $("#datas").append(adddata)
+                    }
+                    console.log(data)
+                },
+                error : function(request,status,error){
+                    alert("에러 발생 범위를 다시 지정해주세요 \n error code : " + error)
+                }
+                
+            })
+        }
+        function clo(){
+            $('#datas').remove();
+            $('#close').hide()
+        }
+        function updateid(){
+            id = $('#updateid').val()
+            $(".modal-body").empty();
+            $.ajax({
+                url : '/info/original',
+                type : 'GET',
+                data : {"_id" : id},
+                success : function(data){
+                    data = JSON.parse(data);
+                    for (a in data[0]){
+                        if (a == '_id'){
+                            var tag = '<p>'+a+': <input value="'+data[0][a]+'" readonly> *id는 수정이 불가합니다*</p>'
+                        }
+                        else{
+                            var tag = '<p>'+a+' : <input value="'+data[0][a]+'"></p>'
+                        }
+                        
+                        $(".modal-body").append(tag)
+                    }
+                    $("#mymodal").modal()
+                },
+                error : function(request,status,error){
+                    alert("ID를 다시 지정해주세요 \n error code : " + error)
+                }
+                
+            })
+           
+        }
+    </script>
+    <style>
+        #datas{
+            height: 500px;
+            overflow: scroll;
+            background-color: white;
+        }
+        #dataimages{
+            width: 150px;
+            height: 150px;
+        }
+        #dataps{
+            width: 90%;
+            height: 200px;
+            font-size: 1em;
+        }
+        .navber{
+            margin: 0; padding: 0;
+            list-style: none;
+            position: fixed;
+            width: 100%;
+            background-color: #008299;  
+        }
+        #navhref{
+            text-decoration: none;
+            color: white
+        }
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            -webkit-animation: spin 2s linear infinite; /* Safari */
+            animation: spin 2s linear infinite;
+        }
+            /* Safari */
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <ul class="navber">
+        <p><a href="/" id="navhref"><h3>&emsp;API Test Page</h3></a></p>
+    </ul>
+    <center>
+        <div class="jumbotron">
+                <h1>Image Search</h1>
+                <p>ID submit</p>
+                <br>
+                <p>
+                    <button class="btn btn-primary" onclick="filecount()">파일 갯수 api</button>
+                    <button class="btn btn-primary" onclick="setting()">setting api</button>
+                    <form id='Search' method="POST"> 
+                        <input name="inputid" id="inputid" placeholder="ID를 입력하세요">
+                        <button class="btn btn-danger" onclick="ui()">Ui</button>
+                    </form>
+                    <br>
+                    <button class="btn btn-default" onclick="imageinfo()">이미지 세부정보 조회</button>
+                    <button class="btn btn-default" onclick="allimg()">모든이미지 조회</button>
+                    <button class="btn btn-default" onclick="license()">라이선스 조회</button><br>
+                    <button class="btn btn-default" onclick="thumbnailhash()">thumbnail Hash</button>
+                    <button class="btn btn-default" onclick="imagehash()">image hash</button>
+                    <button class="btn btn-default" onclick="licensehash()">license hash</button>
+                </p>
+
+        </div>
+        <div class="container"></div>
+        <div class="jumbotron" id="rangepage">
+                <h1>Image 범위 검색</h1>
+                <input id="startdata" type="number" style="width: 50px" > 에서 시작하여 <input id="enddata" type="number" style="width: 50px"> 개의 데이터
+                <button class="btn btn-danger" onclick="rangedata()" >검색</button>
+                <button class="btn btn-info" id="close" onclick="clo()" hide>닫기</button>
+        </div>
+        <div class="jumbotron">
+            <h1 style="color: crimson">Image DELETE</h1>
+            <p>ID submit</p>
+            <h5>*다시 되돌릴수 없습니다.*</h5>
+            <p>
+                <input name="deleteid" id="deleteid"><button class="btn btn-danger" onclick="deleteid()">submit</button>
+            </p>
+        </div>
+        <div class="jumbotron">
+            <h1>Image UPDATE</h1>
+            <p>ID submit</p>
+            <p>
+                <input id="updateid"><button class="btn btn-danger" onclick="updateid()">submit</button>
+            </p>
+        </div>
+    </center>  
+    <div class="modal fade" id="mymodal" role="dialog">
+        <div class="modal-dialog">
+        
+          <!-- Modal content-->
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">Update</h4>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              <button class="btn  btn-info" onclick="alert('아직 구현하지 못했습니다.')">submit</button>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+       
+</body>
+</html>
